@@ -23,17 +23,21 @@
     NSMutableData *data;
     NSURLResponse *response;
     NSError *error;
-    void (^callback)(id jconn);
+    id callback;
+    
+    // if the response is text type...
+    NSString *text;
 }
 
 @property(nonatomic, retain)NSURLConnection *conn;
 @property(nonatomic, retain)NSMutableData *data;
 @property(nonatomic, retain)NSURLResponse *response;
 @property(nonatomic, retain)NSError *error;
-@property(nonatomic, copy)void (^callback)(id jconn);
+@property(nonatomic, copy)void (^callback)(JURLConnection *jconn);
+@property(nonatomic, retain)NSString *text;
 
 // options isn't supported yet
-+ (JURLConnection *)requestUrl:(id)url params:(NSDictionary *)params options:(NSDictionary *)options callback:(void(^)(id))callback;
++ (JURLConnection *)requestUrl:(id)url params:(NSDictionary *)params options:(NSDictionary *)options callback:(void(^)(JURLConnection *))callback;
 
 // utility methods
 + (NSString *)urlStringWithUrl:(id)url params:(NSDictionary *)params;

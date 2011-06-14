@@ -11,7 +11,7 @@
 
 @implementation JURLConnection
 
-@synthesize conn, data, response, error, callback;
+@synthesize conn, data, response, error, text;
 
 - (id)init {
     if ((self = [super init])) {
@@ -20,6 +20,7 @@
         data = nil;
         error = nil;
         callback = nil;
+        text = nil;
     }
     return self;
 }
@@ -30,10 +31,11 @@
     [data release];
     [error release];
     [callback release];
+    [text release];
     [super dealloc];
 }
 
-+ (JURLConnection *)requestUrl:(id)url params:(NSDictionary *)params options:(NSDictionary *)options callback:(void(^)(id))callback {
++ (JURLConnection *)requestUrl:(id)url params:(NSDictionary *)params options:(NSDictionary *)options callback:(void(^)(JURLConnection *))callback {
     JURLConnection *jurl = [[JURLConnection alloc] init];
     jurl.callback = callback;
     
@@ -67,6 +69,29 @@
 
 + (NSURL *)urlWithUrl:(id)url params:(NSDictionary *)params {
     return [NSURL URLWithString:[JURLConnection urlStringWithUrl:url params:params]];
+}
+
+- (NSString *)text {
+    if (!text) {
+        NSString *encodingName = [self.response textEncodingName];
+        NSStringEncoding encoding;
+        if (encodingName) {
+            CFStringEncoding cfenc = CFStringConvertIANACharSetNameToEncoding((CFStringRef)encodingName);
+            encoding = CFStringConvertEncodingToNSStringEncoding(cfenc);
+        } else {
+            encoding = NSISOLatin1StringEncoding;
+        }
+        text = [[NSString alloc] initWithData:self.data encoding:encoding];
+    }
+    return [[text retain] autorelease];
+}
+
+// overcoming typechecking issues
+- (void(^)(JURLConnection*))callback {
+    return (void(^)(JURLConnection*))callback;
+}
+- (void)setCallback:(void(^)(JURLConnection *))cb {
+    callback = cb;
 }
 
 # pragma mark URLConnection delegate methods
