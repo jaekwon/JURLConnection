@@ -8,23 +8,34 @@
 
 #import <Foundation/Foundation.h>
 
-typedef void (^onSuccessType)(NSData *data);
-typedef void (^onFailureType)(NSError *error);
+#ifndef STR
+ #define STR(fmt, ...) [NSString stringWithFormat:(fmt), ## __VA_ARGS__]
+#endif
+#ifndef DICT
+ #define DICT(key, ...) [NSDictionary dictionaryWithKeysAndObjectsMaybeNil: key, ## __VA_ARGS__, nil]
+#endif
+#ifndef ARR
+ #define ARR(item, ...) [NSArray arrayWithObjects:(item), ## __VA_ARGS__, nil]
+#endif
 
 @interface JURLConnection : NSObject {
     NSURLConnection *conn;
     NSMutableData *data;
-    onSuccessType onSuccess;
-    onFailureType onFailure;
+    NSURLResponse *response;
+    NSError *error;
+    void (^callback)(id jconn);
 }
 
 @property(nonatomic, retain)NSURLConnection *conn;
 @property(nonatomic, retain)NSMutableData *data;
-@property(nonatomic, copy)onSuccessType onSuccess;
-@property(nonatomic, copy)onFailureType onFailure;
+@property(nonatomic, retain)NSURLResponse *response;
+@property(nonatomic, retain)NSError *error;
+@property(nonatomic, copy)void (^callback)(id jconn);
 
-+ (JURLConnection *)requestUrl:(id)url params:(NSDictionary *)params options:(NSDictionary *)options success:(void(^)(NSData *))onSuccess failure:(void(^)(NSError *))onFailure;
+// options isn't supported yet
++ (JURLConnection *)requestUrl:(id)url params:(NSDictionary *)params options:(NSDictionary *)options callback:(void(^)(id))callback;
 
+// utility methods
 + (NSString *)urlStringWithUrl:(id)url params:(NSDictionary *)params;
 + (NSURL *)urlWithUrl:(id)url params:(NSDictionary *)params;
 

@@ -11,26 +11,31 @@
 
 @implementation JURLConnection
 
-@synthesize conn, data, onSuccess, onFailure;
+@synthesize conn, data, response, error, callback;
 
 - (id)init {
     if ((self = [super init])) {
         conn = nil;
-        data = [[NSMutableData alloc] init];
+        response = nil;
+        data = nil;
+        error = nil;
+        callback = nil;
     }
     return self;
 }
 
 - (void)dealloc {
     [conn release];
+    [response release];
     [data release];
+    [error release];
+    [callback release];
     [super dealloc];
 }
 
-+ (JURLConnection *)requestUrl:(id)url params:(NSDictionary *)params options:(NSDictionary *)options success:(void(^)(NSData *))onSuccess failure:(void(^)(NSError *))onFailure {
++ (JURLConnection *)requestUrl:(id)url params:(NSDictionary *)params options:(NSDictionary *)options callback:(void(^)(id))callback {
     JURLConnection *jurl = [[JURLConnection alloc] init];
-    jurl.onSuccess = onSuccess;
-    jurl.onFailure = onFailure;
+    jurl.callback = callback;
     
     // construct the request
     NSURLRequest *request = [NSURLRequest requestWithURL:[JURLConnection urlWithUrl:url params:params]];
@@ -66,20 +71,28 @@
 
 # pragma mark URLConnection delegate methods
 
-- (void)connection:(NSURLConnection *)connection didReceiveData:(NSData *)data {
-    Warn(@"received data!");
+- (void)connection:(NSURLConnection *)connection didReceiveData:(NSData *)newData {
+    if (!self.data) {
+        self.data = [NSMutableData dataWithCapacity:[newData length]];
+    }
+    [self.data appendData:newData];
 }
 
-- (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)response {
-    Warn(@"received response!");
+- (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)_response {
+    self.response = _response;
+    if ([self.response expectedContentLength] != -1) {
+        self.data = [NSMutableData dataWithCapacity:[self.response expectedContentLength]];
+    } // else, didReceiveData will create the data for us.
 }
 
 - (void)connectionDidFinishLoading:(NSURLConnection *)connection {
-    Warn(@"connection did finish loading!");
+    // i guess we succeeded then.
+    self.callback(self);
 }
 
-- (void)connection:(NSURLConnection *)connection didFailWithError:(NSError *)error {
-    Warn(@"did fail with error!");
+- (void)connection:(NSURLConnection *)connection didFailWithError:(NSError *)_error {
+    self.error = _error;
+    self.callback(self);
 }
 
 @end
