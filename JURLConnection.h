@@ -17,6 +17,10 @@
 #ifndef ARR
  #define ARR(item, ...) [NSArray arrayWithObjects:(item), ## __VA_ARGS__, nil]
 #endif
+#ifndef WITH_GCQ
+  #define WITH_GCQ dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{ // GCQ is the global concurrent queue
+  #define END_WITH });
+#endif
 
 @interface JURLConnection : NSObject {
     NSURLConnection *conn;
@@ -37,6 +41,7 @@
 @property(nonatomic, retain)NSString *text;
 
 // options isn't supported yet
+// places a job asynchronously on the global concurrent queue.
 + (JURLConnection *)requestUrl:(id)url params:(NSDictionary *)params options:(NSDictionary *)options callback:(void(^)(JURLConnection *))callback;
 
 // utility methods

@@ -7,6 +7,7 @@
 //
 
 #import "JURLConnection.h"
+#import "SBJson.h"
 
 
 @implementation JURLConnection
@@ -39,11 +40,42 @@
     JURLConnection *jurl = [[JURLConnection alloc] init];
     jurl.callback = callback;
     
-    // construct the request
-    NSURLRequest *request = [NSURLRequest requestWithURL:[JURLConnection urlWithUrl:url params:params]];
+    NSString *method = [options objectForKey:@"method"];
+    if (!method) method = @"GET";
+    NSURL *requestURL = nil;
+    NSMutableURLRequest *request = nil;
+    
+    if (options && [method isEqualToString:@"POST"]) {
+        // make request url and request
+        if ([url isKindOfClass:[NSString class]])
+            requestURL = [NSURL URLWithString:url];
+        else
+            requestURL = url;
+        NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:requestURL];
+        [request setHTTPMethod:method];
+        // set POST data
+        if (params) {
+            // we could support multipart, but first i want
+            // JSON posting by default.
+            NSData *postData = [[params JSONRepresentation] dataUsingEncoding:NSUTF8StringEncoding];
+            [request setHTTPBody:postData];
+        }
+    } else {
+        // make request url and request
+        if ([url isKindOfClass:[NSString class]])
+            requestURL = [NSURL URLWithString:url];
+        else
+            requestURL = url;
+        NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:requestURL];
+        [request setHTTPMethod:method];
+    }
+    
     jurl.conn = [NSURLConnection connectionWithRequest:request delegate:jurl];
+    WITH_GCQ
     [jurl.conn start];
-    return url;
+    END_WITH
+    return url;        
+
 }
 
 + (NSString *)urlStringWithUrl:(id)url params:(NSDictionary *)params {
