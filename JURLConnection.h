@@ -22,12 +22,16 @@
   #define END_WITH });
 #endif
 
+@class JURLConnection;
+
+typedef void(^jurlCallbackType)(JURLConnection *jconn);
+
 @interface JURLConnection : NSObject {
     NSURLConnection *conn;
     NSMutableData *data;
-    NSURLResponse *response;
+    NSHTTPURLResponse *response;
     NSError *error;
-    id callback;
+    jurlCallbackType callback;
     
     // if the response is text type...
     NSString *text;
@@ -35,14 +39,16 @@
 
 @property(nonatomic, retain)NSURLConnection *conn;
 @property(nonatomic, retain)NSMutableData *data;
-@property(nonatomic, retain)NSURLResponse *response;
+@property(nonatomic, retain)NSHTTPURLResponse *response;
 @property(nonatomic, retain)NSError *error;
-@property(nonatomic, copy)void (^callback)(JURLConnection *jconn);
+@property(nonatomic, copy)jurlCallbackType callback;
 @property(nonatomic, retain)NSString *text;
 
 // options isn't supported yet
 // places a job asynchronously on the global concurrent queue.
-+ (JURLConnection *)requestUrl:(id)url params:(NSDictionary *)params options:(NSDictionary *)options callback:(void(^)(JURLConnection *))callback;
++ (JURLConnection *)requestUrl:(id)url params:(NSDictionary *)params options:(NSDictionary *)options callback:(jurlCallbackType)callback;
+// interpret the response text as json
+- (NSDictionary *)jsonResponse;
 
 // utility methods
 + (NSString *)urlStringWithUrl:(id)url params:(NSDictionary *)params;

@@ -12,7 +12,7 @@
 
 @implementation JURLConnection
 
-@synthesize conn, data, response, error, text;
+@synthesize conn, data, response, error, text, callback;
 
 - (id)init {
     if ((self = [super init])) {
@@ -27,6 +27,7 @@
 }
 
 - (void)dealloc {
+    Debug(@"[JURLConnection dealloc]");
     [conn release];
     [response release];
     [data release];
@@ -36,7 +37,7 @@
     [super dealloc];
 }
 
-+ (JURLConnection *)requestUrl:(id)url params:(NSDictionary *)params options:(NSDictionary *)options callback:(void(^)(JURLConnection *))callback {
++ (JURLConnection *)requestUrl:(id)url params:(NSDictionary *)params options:(NSDictionary *)options callback:(jurlCallbackType)callback {
     JURLConnection *jurl = [[JURLConnection alloc] init];
     jurl.callback = callback;
     
@@ -51,12 +52,14 @@
             requestURL = [NSURL URLWithString:url];
         else
             requestURL = url;
-        NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:requestURL];
+        request = [NSMutableURLRequest requestWithURL:requestURL];
         [request setHTTPMethod:method];
         // set POST data
         if (params) {
             // we could support multipart, but first i want
             // JSON posting by default.
+            [request setValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
+            Debug(@"POST body: %@", [params JSONRepresentation]);
             NSData *postData = [[params JSONRepresentation] dataUsingEncoding:NSUTF8StringEncoding];
             [request setHTTPBody:postData];
         }
@@ -66,16 +69,19 @@
             requestURL = [NSURL URLWithString:url];
         else
             requestURL = url;
-        NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:requestURL];
+        request = [NSMutableURLRequest requestWithURL:requestURL];
         [request setHTTPMethod:method];
     }
     
-    jurl.conn = [NSURLConnection connectionWithRequest:request delegate:jurl];
-    WITH_GCQ
-    [jurl.conn start];
-    END_WITH
-    return url;        
-
+    // XXX right now delegate methods always get called from the main thread,
+    // because we create the connection on the main thread,
+    // which is required for NSURLConnection because it requires a runloop.
+    
+    WITH_MAINQ {
+        jurl.conn = [NSURLConnection connectionWithRequest:request delegate:jurl];
+        [jurl.conn start];
+    } END_WITH
+    return url; 
 }
 
 + (NSString *)urlStringWithUrl:(id)url params:(NSDictionary *)params {
@@ -118,15 +124,15 @@
     return [[text retain] autorelease];
 }
 
-// overcoming typechecking issues
-- (void(^)(JURLConnection*))callback {
-    return (void(^)(JURLConnection*))callback;
-}
-- (void)setCallback:(void(^)(JURLConnection *))cb {
-    callback = cb;
+- (NSDictionary *)jsonResponse {
+    return [self.text JSONValue];
 }
 
 # pragma mark URLConnection delegate methods
+
+- (NSURLRequest *)connection:(NSURLConnection *)connection willSendRequest:(NSURLRequest *)request redirectResponse:(NSURLResponse *)response {
+    return request;
+}
 
 - (void)connection:(NSURLConnection *)connection didReceiveData:(NSData *)newData {
     if (!self.data) {
@@ -136,7 +142,8 @@
 }
 
 - (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)_response {
-    self.response = _response;
+    assert([_response isKindOfClass:[NSHTTPURLResponse class]]);
+    self.response = (NSHTTPURLResponse *)_response;
     if ([self.response expectedContentLength] != -1) {
         self.data = [NSMutableData dataWithCapacity:[self.response expectedContentLength]];
     } // else, didReceiveData will create the data for us.

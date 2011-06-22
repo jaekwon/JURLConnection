@@ -11,6 +11,7 @@
 
 @interface NSDictionary (Utils)
 
-- (id)dictionaryWithKeysAndObjectsMaybeNil:(id)arg1, ...;
++ (id)dictionaryWithKeysAndObjectsMaybeNil:(id)arg1, ...;
+- (id)objectMaybeNilForKey:(id)key;
 
 @end

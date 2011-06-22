@@ -11,14 +11,14 @@
 
 @implementation NSDictionary (Utils)
 
-- (id)dictionaryWithKeysAndObjectsMaybeNil:(id)arg1, ... {
++ (id)dictionaryWithKeysAndObjectsMaybeNil:(id)arg1, ... {
     va_list args;
     id object;
     va_start(args, arg1);
     NSMutableDictionary *dict = [NSMutableDictionary dictionary];
-    int counter = 0;
-    id key = nil;
-    while((object = va_arg(args, id))) {
+    int counter = 1;
+    id key = arg1;
+    while((object = va_arg(args, id)) || (counter%2==1)) {
         // knock myself out
         if (object == nil)
             object = [NSNull null];
